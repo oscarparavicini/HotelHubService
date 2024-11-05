@@ -2,12 +2,10 @@ package ch.unil.doplab.demo.rest;
 
 import ch.unil.doplab.demo.domain.HotelApplicationState;
 import ch.unil.doplab.Hotel;
-
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Path("/hotels")
@@ -25,8 +23,13 @@ public class HotelResource {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Optional<Hotel> getHotelById(@PathParam("id") UUID id) {
-        return Optional.ofNullable(appState.getHotel(id));
+    public Hotel getHotelById(@PathParam("id") UUID id) {
+        Hotel hotel = appState.getHotel(id);
+        if (hotel != null) {
+            return hotel;
+        } else {
+            throw new NotFoundException("Hotel not found");
+        }
     }
 
     @POST
@@ -41,13 +44,20 @@ public class HotelResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Hotel updateHotel(@PathParam("id") UUID id, Hotel hotel) {
-        appState.setHotel(id, hotel);
-        return hotel;
+        boolean updated = appState.updateHotel(id, hotel);
+        if (updated) {
+            return hotel;
+        } else {
+            throw new NotFoundException("Hotel not found");
+        }
     }
 
     @DELETE
     @Path("/{id}")
     public void deleteHotel(@PathParam("id") UUID id) {
-        appState.removeHotel(id);
+        boolean removed = appState.removeHotel(id);
+        if (!removed) {
+            throw new NotFoundException("Hotel not found");
+        }
     }
 }

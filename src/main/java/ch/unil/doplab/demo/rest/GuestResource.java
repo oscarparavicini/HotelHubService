@@ -2,13 +2,10 @@ package ch.unil.doplab.demo.rest;
 
 import ch.unil.doplab.demo.domain.HotelApplicationState;
 import ch.unil.doplab.Guest;
-
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Path("/guests")
@@ -26,8 +23,13 @@ public class GuestResource {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Optional<Guest> getGuestById(@PathParam("id") UUID id) {
-        return appState.getGuest(id);
+    public Guest getGuestById(@PathParam("id") UUID id) {
+        Guest guest = appState.getGuest(id).orElse(null);
+        if (guest != null) {
+            return guest;
+        } else {
+            throw new NotFoundException("Guest not found");
+        }
     }
 
     @POST
@@ -41,14 +43,21 @@ public class GuestResource {
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Guest updateGuest(@PathParam("id") UUID id, Guest guest) {
-        appState.setGuest(id, guest);
-        return guest;
+    public boolean updateGuest(@PathParam("id") UUID id, Guest guest) {
+        boolean updated = appState.updateGuest(id, guest);
+        if (updated) {
+            return true;
+        } else {
+            throw new NotFoundException("Guest not found");
+        }
     }
 
     @DELETE
     @Path("/{id}")
     public void deleteGuest(@PathParam("id") UUID id) {
-        appState.removeGuest(id);
+        boolean removed = appState.removeGuest(id);
+        if (!removed) {
+            throw new NotFoundException("Guest not found");
+        }
     }
 }

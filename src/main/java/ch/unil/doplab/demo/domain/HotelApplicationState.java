@@ -3,7 +3,6 @@ package ch.unil.doplab.demo.domain;
 import ch.unil.doplab.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-
 import java.time.LocalDate;
 import java.util.*;
 
@@ -34,6 +33,11 @@ public class HotelApplicationState {
 
     public boolean removeHotel(UUID hotelId) {
         Hotel removedHotel = hotels.remove(hotelId);
+        if (removedHotel != null) {
+            for (Room room : removedHotel.getRooms()) {
+                rooms.remove(room.getId());
+            }
+        }
         return removedHotel != null;
     }
 
@@ -45,12 +49,17 @@ public class HotelApplicationState {
         return new ArrayList<>(hotels.values());
     }
 
-    public boolean setHotel(UUID id, Hotel hotel) {
-        if (hotels.containsKey(id)) {
-            hotel.setId(id);
-            hotels.put(id, hotel);
+    public boolean updateHotel(UUID id, Hotel updatedHotel) {
+        Hotel existingHotel = hotels.get(id);
+        if (existingHotel != null) {
+            if (updatedHotel.getName() != null) existingHotel.setName(updatedHotel.getName());
+            if (updatedHotel.getUsername() != null) existingHotel.setUsername(updatedHotel.getUsername());
+            if (updatedHotel.getPassword() != null) existingHotel.setPassword(updatedHotel.getPassword());
+            if (updatedHotel.getAddress() != null) existingHotel.setAddress(updatedHotel.getAddress());
+            if (updatedHotel.getContactInfo() != null) existingHotel.setContactInfo(updatedHotel.getContactInfo());
             return true;
         }
+        System.out.println("Hotel not found");
         return false;
     }
 
@@ -74,12 +83,17 @@ public class HotelApplicationState {
         return new ArrayList<>(guests.values());
     }
 
-    public boolean setGuest(UUID id, Guest guest) {
-        if (guests.containsKey(id)) {
-            guest.setID(id);
-            guests.put(id, guest);
+    public boolean updateGuest(UUID id, Guest updatedGuest) {
+        Guest guest = guests.get(id);
+        if (guest != null) {
+            if (updatedGuest.getFirstName() != null) guest.setFirstName(updatedGuest.getFirstName());
+            if (updatedGuest.getLastName() != null) guest.setLastName(updatedGuest.getLastName());
+            if (updatedGuest.getUsername() != null) guest.setUsername(updatedGuest.getUsername());
+            if (updatedGuest.getPassword() != null) guest.setPassword(updatedGuest.getPassword());
+            if (updatedGuest.getContactInfo() != null) guest.setContactInfo(updatedGuest.getContactInfo());
             return true;
         }
+        System.out.println("Guest not found");
         return false;
     }
 
@@ -98,10 +112,16 @@ public class HotelApplicationState {
 
     public boolean removeRoom(UUID hotelId, UUID roomId) {
         Hotel hotel = hotels.get(hotelId);
-        if (hotel == null) return false;
+        if (hotel == null) {
+            System.out.println("Hotel not found");
+            return false;
+        }
 
         Room roomToRemove = findRoomInHotel(hotel, roomId);
-        if (roomToRemove == null) return false;
+        if (roomToRemove == null) {
+            System.out.println("Room not found in this hotel");
+            return false;
+        }
 
         hotel.removeRoom(roomToRemove);
         rooms.remove(roomId);
@@ -121,64 +141,80 @@ public class HotelApplicationState {
         return null;
     }
 
-    public Object findAvailableRooms(UUID hotelId, LocalDate checkInDate, LocalDate checkOutDate) {
+    public Set<Room> findAvailableRooms(UUID hotelId, LocalDate checkInDate, LocalDate checkOutDate) {
         Hotel hotel = hotels.get(hotelId);
-        if (hotel == null) return Optional.empty();
+        if (hotel == null) {
+            throw new IllegalArgumentException("Hotel not found");
+        }
+        Set<Room> availableRooms = new HashSet<>(hotel.getRooms());
+        for (Booking booking : bookings.values()) {
+            if (hotel.getRooms().contains(booking.getRoom()) &&
+                    datesOverlap(booking.getCheckInDate(), booking.getCheckOutDate(), checkInDate, checkOutDate)) {
+                availableRooms.remove(booking.getRoom());
+            }
+        }
+        return availableRooms;
+    }
 
-        return hotel.findAvailableRooms(checkInDate, checkOutDate);
+    private boolean datesOverlap(LocalDate existingStart, LocalDate existingEnd, LocalDate newStart, LocalDate newEnd) {
+        boolean startsBeforeExistingEnds = newStart.isBefore(existingEnd);
+        boolean endsAfterExistingStarts = newEnd.isAfter(existingStart);
+        return startsBeforeExistingEnds && endsAfterExistingStarts;
     }
 
     public Booking addBooking(UUID guestId, UUID roomId, LocalDate checkInDate, LocalDate checkOutDate) {
         Guest guest = guests.get(guestId);
-        if (guest == null) throw new IllegalArgumentException("Guest not found");
+        if (guest == null) {
+            throw new IllegalArgumentException("Guest not found");
+        }
 
-        Room room = findRoomInHotels(roomId);
-        if (room == null) throw new IllegalArgumentException("Room not found");
+        Room room = rooms.get(roomId);
+        if (room == null) {
+            throw new IllegalArgumentException("Room not found");
+        }
 
         Booking booking = new Booking(room, checkInDate, checkOutDate, guest);
         bookings.put(booking.getId(), booking);
-        guest.addBooking(booking);
-        room.addBooking(booking);
         return booking;
     }
 
-    private Room findRoomInHotels(UUID roomId) {
-        return rooms.get(roomId);
-    }
-
     public boolean cancelBooking(UUID bookingId) {
-        Booking booking = bookings.get(bookingId);
-        if (booking == null) return false;
-
-        booking.getGuest().cancelBooking(booking);
-        booking.getRoom().removeBooking(booking);
-        bookings.remove(bookingId);
-        return true;
+        return bookings.remove(bookingId) != null;
     }
 
     public Booking getBooking(UUID bookingId) {
         return bookings.get(bookingId);
     }
 
-    public boolean setBooking(UUID id, Booking updatedBooking) {
+    public boolean updateBooking(UUID id, Booking updatedBooking) {
         Booking existingBooking = bookings.get(id);
         if (existingBooking != null) {
-            existingBooking.setRoom(updatedBooking.getRoom());
-            existingBooking.setCheckInDate(updatedBooking.getCheckInDate());
-            existingBooking.setCheckOutDate(updatedBooking.getCheckOutDate());
-            existingBooking.setGuest(updatedBooking.getGuest());
-            existingBooking.setPayment(updatedBooking.getPayment());
-
-            existingBooking.calculateTotalAmount();
-
+            if (updatedBooking.getRoom() != null) {
+                existingBooking.setRoom(updatedBooking.getRoom());
+            }
+            if (updatedBooking.getCheckInDate() != null) {
+                existingBooking.setCheckInDate(updatedBooking.getCheckInDate());
+            }
+            if (updatedBooking.getCheckOutDate() != null) {
+                existingBooking.setCheckOutDate(updatedBooking.getCheckOutDate());
+            }
+            if (updatedBooking.getGuest() != null) {
+                existingBooking.setGuest(updatedBooking.getGuest());
+            }
+            if (updatedBooking.getPayment() != null) {
+                existingBooking.setPayment(updatedBooking.getPayment());
+            }
             return true;
         }
+        System.out.println("Booking not found");
         return false;
     }
 
     public Payment createPayment(UUID bookingId, double amount) {
         Booking booking = bookings.get(bookingId);
-        if (booking == null) throw new IllegalArgumentException("Booking not found");
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
 
         Payment payment = new Payment(amount);
         booking.setPayment(payment);
@@ -189,8 +225,9 @@ public class HotelApplicationState {
         Booking booking = bookings.get(bookingId);
         if (booking != null) {
             return booking.getPayment();
+        } else {
+            return null;
         }
-        return null;
     }
 
     private void populateApplicationState() {
@@ -208,4 +245,3 @@ public class HotelApplicationState {
         addRoom(hotel1.getId(), room2);
     }
 }
-
