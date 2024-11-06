@@ -76,7 +76,7 @@ public class HotelApplicationState {
     }
 
     public Guest getGuest(UUID guestId) {
-        return Optional.ofNullable(guests.get(guestId));
+        return guests.get(guestId);
     }
 
     public List<Guest> getAllGuests() {

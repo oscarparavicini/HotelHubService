@@ -24,7 +24,7 @@ public class GuestResource {
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Guest getGuestById(@PathParam("id") UUID id) {
-        Guest guest = appState.getGuest(id).orElse(null);
+        Guest guest = appState.getGuest(id);
         if (guest != null) {
             return guest;
         } else {
