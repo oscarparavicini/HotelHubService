@@ -75,7 +75,7 @@ public class HotelApplicationState {
         return guests.remove(guestId) != null;
     }
 
-    public Optional<Guest> getGuest(UUID guestId) {
+    public Guest getGuest(UUID guestId) {
         return Optional.ofNullable(guests.get(guestId));
     }
 
@@ -184,30 +184,6 @@ public class HotelApplicationState {
 
     public Booking getBooking(UUID bookingId) {
         return bookings.get(bookingId);
-    }
-
-    public boolean updateBooking(UUID id, Booking updatedBooking) {
-        Booking existingBooking = bookings.get(id);
-        if (existingBooking != null) {
-            if (updatedBooking.getRoom() != null) {
-                existingBooking.setRoom(updatedBooking.getRoom());
-            }
-            if (updatedBooking.getCheckInDate() != null) {
-                existingBooking.setCheckInDate(updatedBooking.getCheckInDate());
-            }
-            if (updatedBooking.getCheckOutDate() != null) {
-                existingBooking.setCheckOutDate(updatedBooking.getCheckOutDate());
-            }
-            if (updatedBooking.getGuest() != null) {
-                existingBooking.setGuest(updatedBooking.getGuest());
-            }
-            if (updatedBooking.getPayment() != null) {
-                existingBooking.setPayment(updatedBooking.getPayment());
-            }
-            return true;
-        }
-        System.out.println("Booking not found");
-        return false;
     }
 
     public Payment createPayment(UUID bookingId, double amount) {

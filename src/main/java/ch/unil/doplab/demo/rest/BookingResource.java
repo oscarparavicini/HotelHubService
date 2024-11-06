@@ -30,6 +30,31 @@ public class BookingResource {
         }
     }
 
+    @PUT
+    @Path("/{bookingId}/guest/{guestId}/room/{roomId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Booking updateBooking(@PathParam("bookingId") UUID bookingId,
+                                 @PathParam("guestId") UUID guestId,
+                                 @PathParam("roomId") UUID roomId,
+                                 @QueryParam("checkIn") String checkIn,
+                                 @QueryParam("checkOut") String checkOut) {
+        try {
+            LocalDate checkInDate = LocalDate.parse(checkIn);
+            LocalDate checkOutDate = LocalDate.parse(checkOut);
+            Booking existingBooking = appState.getBooking(bookingId);
+            if (existingBooking == null) {
+                throw new NotFoundException("Booking not found");
+            }
+            existingBooking.setGuest(appState.getGuest(guestId));
+            existingBooking.setRoom(appState.getRoom(roomId));
+            existingBooking.setCheckInDate(checkInDate);
+            existingBooking.setCheckOutDate(checkOutDate);
+            return existingBooking;
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid date format or input");
+        }
+    }
+
     @DELETE
     @Path("/{id}")
     public void cancelBooking(@PathParam("id") UUID id) {
